@@ -1,28 +1,28 @@
 company:
   name: Partify.co
-  logo: /bio/Logo-Partify.png
+  logo: Logo-Partify.png
 product_hmw: How might we help working millennial parents manage their household and planning events and life celebrations?
 product_narrative: |
   With more than 1M millennial women becoming mothers each year, the space of Parent-tech is booming. 
   Our challenge is to find out a digital solution to help them with parenting-related pain points and make an impact on future parenthood ways.
 team:
-  picture: /bio/team-pic.jpg
+  picture: team-pic.jpg
   roster:
   - name: Gabrielle Facquet
     email: gpf26@cornell.edu
-    picture: /bio/hs-G-resized.jpg
+    picture: hs-G-resized.jpg
     program: ORIE
   - name: Joey Baruch
     email: jb2562@cornell.edu
-    picture: /bio/hs-J-resized.jpg
+    picture: hs-J-resized.jpg
     program: MBA
   - name: Plamena Georgieva
     email: pvg25@cornell.edu
-    picture: /bio/hs-P-resized.jpg
+    picture: hs-P-resized.jpg
     program: MBA
   - name: Wenqing Tang
     email: wt292@cornell.edu
-    picture: /bio/hs-W-resized.jpg
+    picture: hs-W-resized.jpg
     program: CM 
 assets:
 - title: Sprint 1
