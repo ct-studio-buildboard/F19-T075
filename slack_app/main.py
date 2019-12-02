@@ -14,6 +14,12 @@
 # [START functions_slack_setup]
 import json
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 import apiclient
 from flask import jsonify
@@ -86,11 +92,35 @@ def make_search_request(query):
     return format_slack_message(query, res)
 # [END functions_slack_request]
 
+def test_funcs():
+    data = [[1, 10], [1, 15], [1, 14]] 
+    df = pd.DataFrame(data, columns = ['A', 'B']) 
+    cs = cosine_similarity(df)
+
+    # note that adding the second scope is necesary
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    client = gspread.authorize(creds)
+
+    # Find a workbook by name and open the first sheet
+    # Make sure you use the right name here.
+    sheet = client.open("SlackApp_Test1").sheet1
+
+    # Extract and print all of the values
+    list_of_hashes = sheet.get_all_records()
+
+    return list_of_hashes
 
 # [START functions_slack_search]
 def kg_search(request):
     if request.method != 'POST':
         return 'Only POST requests are accepted', 405
+    
+    try:
+        hashes = test_funcs()
+        return f'All OK: {hashes}', 200
+    except Exception as ex:
+        return f'got error: {ex}', 406
 
     verify_web_hook(request.form)
     kg_search_response = make_search_request(request.form['text'])

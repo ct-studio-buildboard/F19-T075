@@ -35,6 +35,7 @@ MANIFEST
 
 # Credentials
 slack_app/config.json
+slack_app/client_secret.json
 
 # Installer logs
 pip-log.txt

@@ -1,11 +1,15 @@
-<img src="https://avatars2.githubusercontent.com/u/2810941?v=3&s=96" alt="Google Cloud Platform logo" title="Google Cloud Platform" align="right" height="96" width="96"/>
+# How we build this
 
-# Google Cloud Functions - Slack Slash Command sample
+## Tutorials:
 
-See:
+### Google Cloud Functions - Slack Slash Command sample
 
-* [Cloud Functions Slack tutorial][tutorial]
-* [Cloud Functions Slack sample source code][code]
+* [Cloud Functions Slack tutorial][https://cloud.google.com/functions/docs/tutorials/slack]
 
-[tutorial]: https://cloud.google.com/functions/docs/tutorials/slack
-[code]: main.py
+### Using google sheets as a backend for pandas
+
+* [an easy way to read/write google spreadsheet in python][https://www.twilio.com/blog/2017/02/an-easy-way-to-read-and-write-to-a-google-spreadsheet-in-python.html]
+
+* [gotcha: not enough permissions or scopes][https://stackoverflow.com/questions/56084171/accessing-google-sheets-api-with-python]
+
+### Creating a modal for user input
