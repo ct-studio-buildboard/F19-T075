@@ -1,9 +1,13 @@
 # [START functions_slack_setup]
 import json
 
+from slackclient import SlackClient as slack
+
 import apiclient
 from flask import jsonify
 from DAL import get_friends, user_exists
+
+import my_slack_app_constants as const
 
 import logging
 
@@ -20,13 +24,14 @@ def verify_web_hook(form):
         raise ValueError('Invalid request/credentials.')
 
 
-def format_slack_message(friends):
+def format_slack_message(username, friends):
     entity = None
 
-    friends = [f'@{f}' for f in friends]
+    sep = ", "
+    friends = [f'<@{f}>' for f in friends]
     message = {
         'response_type': 'in_channel',
-        'text': 'Your friend recomendations: {}'.format(friends),
+        'text': f'Hi <@{username}>!\nYour top {const.TOPN} friend recomendations are: {sep.join(friends)}',
     }
     return message
 
@@ -44,7 +49,40 @@ def friend_search(request):
     logging.info(request.form)
     
     verify_web_hook(request.form)
-    friend_search_response = make_search_request(request.form['user_name'])
-    return jsonify(friend_search_response)
+    username = request.form['user_id']
+    friend_search_response = make_search_request(username)
+    return jsonify(username, friend_search_response)
     
+def modal(request):
+    if request.method != 'POST':
+        return 'Only POST requests are accepted', 405
+    
+    client = slack.WebClient(token=config['SLACK_TOKEN'])
+
+    trigger = request.form['trigger_id']
+    client.views_open(
+        trigger_id=trigger,
+        view={
+            type: "modal",
+            callback_id: "view_identifier",
+            title: {
+                type: "plain_text",
+                text: "Modal title"
+            },
+            blocks: [
+            {
+                type: "input",
+                label: {
+                    type: "plain_text",
+                    text: "Input label"
+                },
+                element: {
+                    type: "plain_text_input",
+                    action_id: "value_indentifier"
+                }
+            }]
+        }
+    )
+    
+    return "what happened?"
     

@@ -73,21 +73,21 @@ def get_sort_indexes(l, reverse=False):
 # assumes n a positive integer  
 def compute_cosine_top_n(df, n):
     cosine_df = df.copy()
-    cosine_df = cosine_df.drop([const.NAME], axis=1)
+    cosine_df = cosine_df.drop([const.USER_ID], axis=1)
 
     cosine = cosine_similarity(cosine_df)
     cosine_df['cosine'] = list(cosine)
     
     # removal of self ocurs by range exclusion of 0
     l = range(1, n+1)
-    cosine_df['top_n'] = cosine_df.apply(lambda row: [df.iloc[get_sort_indexes(row.cosine, True)[x]][const.NAME] for x in l] , axis=1)
+    cosine_df['top_n'] = cosine_df.apply(lambda row: [df.iloc[get_sort_indexes(row.cosine, True)[x]][const.USER_ID] for x in l] , axis=1)
     df['cosine_top_n'] = cosine_df['top_n']
     
     logging.info(f'successfully computed the top {n} cosine matches')
     return df
 
 def get_user_index_list(df, user):
-    return df.index[df[const.NAME] == user].tolist()
+    return df.index[df[const.USER_ID] == user].tolist()
 
 # assumes df has column named cosine_top_n
 # assumes user is in df only once

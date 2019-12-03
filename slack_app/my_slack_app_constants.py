@@ -2,6 +2,7 @@ TOPN = 3
 SHEET_NAME = "SlackApp_Test1"
 
 #define column names
+USER_ID = 'user_id'
 NAME = 'user_name'
 AGE = 'age'
 CUISINE = 'cuisine'
