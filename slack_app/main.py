@@ -1,13 +1,14 @@
 # [START functions_slack_setup]
 import json
 
-from slackclient import SlackClient as slack
+import slack
 
 import apiclient
 from flask import jsonify
 from DAL import get_friends, user_exists
 
 import my_slack_app_constants as const
+import views
 
 import logging
 
@@ -40,49 +41,54 @@ def make_search_request(username):
         return "please fill the form by calling /myData"
         
     friends = get_friends(username)
-    return format_slack_message(friends)
+    return format_slack_message(username, friends)
 
 def friend_search(request):
     if request.method != 'POST':
         return 'Only POST requests are accepted', 405
     
+    verify_web_hook(request.form)
+
     logging.info(request.form)
     
-    verify_web_hook(request.form)
     username = request.form['user_id']
     friend_search_response = make_search_request(username)
-    return jsonify(username, friend_search_response)
+    return jsonify(friend_search_response)
     
 def modal(request):
     if request.method != 'POST':
         return 'Only POST requests are accepted', 405
-    
-    client = slack.WebClient(token=config['SLACK_TOKEN'])
 
+    verify_web_hook(request.form)
+    
+    client = slack.WebClient(token=config['SLACK_OAUTH'])
+
+    logging.info(f'request: {request}')
+    logging.info(f'form: {request.form}')
+    
+
+    
+    view = views.pl_view # test_view 
+    logging.info(f'using view: {view}')
+    
     trigger = request.form['trigger_id']
     client.views_open(
         trigger_id=trigger,
-        view={
-            type: "modal",
-            callback_id: "view_identifier",
-            title: {
-                type: "plain_text",
-                text: "Modal title"
-            },
-            blocks: [
-            {
-                type: "input",
-                label: {
-                    type: "plain_text",
-                    text: "Input label"
-                },
-                element: {
-                    type: "plain_text_input",
-                    action_id: "value_indentifier"
-                }
-            }]
-        }
+        view = view
     )
     
     return "what happened?"
+    
+    
+def get_input(request):
+    if request.method != 'POST':
+        return 'Only POST requests are accepted', 405
+
+    verify_web_hook(request.form)
+
+    logging.info(f'got input request: {request}')
+    logging.info(f'request form: {request.form}')
+
+    
+    return "nothing";
     
