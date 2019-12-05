@@ -1,5 +1,6 @@
 TOPN = 3
 SHEET_NAME = "SlackApp_Test1"
+ROW_LEN = 16
 
 #define column names
 USER_ID = 'user_id'
@@ -53,5 +54,5 @@ vaca_map = {'Relaxing on the beach': 1, 'Exploring new countries and cultures': 
 new_things_map = {'Culture Related': 1, 'Food Related': 2, 'Sports Related': 3, 'Travel Related': 4}
 dogcat_map = {'Cats': -1, 'Dogs': 1, 'Neither': 0}
 beer_wine_map = {'Beer':1 , 'Wine': -1, 'Pref Not to drink':0}
-volunteer_map = {'Always - whenever i have free time': 1, 'I try but time is limited': 2, 'No - not really my thing': 3}
-tea_coffee_map = {'Coffee':1, 'Tea': 2, 'Both': 3, 'Neither - i don\'t need caffine': -4}
+volunteer_map = {'Always - whenever I have free time': 1, 'I try but time is limited': 2, 'No - not really my thing': 3}
+tea_coffee_map = {'Coffee':1, 'Tea': 2, 'Both': 3, 'Neither - I don\'t need caffine': -4}

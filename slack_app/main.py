@@ -5,7 +5,7 @@ import slack
 
 import apiclient
 from flask import jsonify
-from DAL import get_friends, user_exists
+from DAL import get_friends, user_exists, user_count, add_user
 
 import my_slack_app_constants as const
 import views
@@ -30,15 +30,16 @@ def format_slack_message(username, friends):
 
     sep = ", "
     friends = [f'<@{f}>' for f in friends]
+    userCount = user_count()
     message = {
         'response_type': 'in_channel',
-        'text': f'Hi <@{username}>!\nYour top {const.TOPN} friend recomendations are: {sep.join(friends)}',
+        'text': f'Hi <@{username}>!\nOf the {userCount} users that have responded, we think your top {const.TOPN} friend recomendations are: {sep.join(friends)}',
     }
     return message
 
 def make_search_request(username):
     if not user_exists(username):
-        return "please fill the form by calling /myData"
+        return "please fill the full form by calling /addme"
         
     friends = get_friends(username)
     return format_slack_message(username, friends)
@@ -63,32 +64,49 @@ def modal(request):
     
     client = slack.WebClient(token=config['SLACK_OAUTH'])
 
-    logging.info(f'request: {request}')
-    logging.info(f'form: {request.form}')
-    
-
-    
-    view = views.pl_view # test_view 
-    logging.info(f'using view: {view}')
-    
+  
+    userid = request.form['user_id']
+    # if user_exists(username):
+        # return f'<@{userid}>, you have already filled out the form, thanks!\nIf you'd like to check whether we have better matches, run /friends'
+        
     trigger = request.form['trigger_id']
     client.views_open(
         trigger_id=trigger,
         view = view
     )
     
-    return "what happened?"
+    return f'<@{userid}>, if you were correctly added to our database (we\'re still @ beta)\nyou can run /friends to find friend recommendations'
     
     
 def get_input(request):
     if request.method != 'POST':
         return 'Only POST requests are accepted', 405
 
-    verify_web_hook(request.form)
+    # verify_web_hook(request.form) # payload['api_app_id'] == AR00ULSNR
 
-    logging.info(f'got input request: {request}')
-    logging.info(f'request form: {request.form}')
+    payload = json.loads(request.form['payload'])
+    logging.info(f'request form payload: {payload}')
+    
+    req_type = payload['type']
+    # change this if you want to do input verification
+    if req_type != "view_submission":
+        return 
+        
+    # state = payload['view']['state']
+    # logging.info(f'state: {state}')
 
+    add_user(payload)
+    return ''
     
-    return "nothing";
     
+    
+def route(request):
+    if request.method != 'POST':
+        return 'Only POST requests are accepted', 405
+    
+    arg = request.form['text']
+    
+    if arg == 'addme':
+        return modal(request)
+    elif arg == 'find':
+        return get_friends(request)

@@ -30,6 +30,13 @@ pl_json = """{
 				"text": "Welcome to Cornell Tech friend-match."
 			}
 		},
+        {
+			"type": "section",
+			"text": {
+				"type": "plain_text",
+				"text": "Note that you can only fill this up once!!!"
+			}
+		}
 		{
 			"type": "divider"
 		},
