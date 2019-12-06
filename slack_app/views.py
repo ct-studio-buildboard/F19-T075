@@ -6,7 +6,7 @@ pl_json = """{
 	"type": "modal",
 	"title": {
 		"type": "plain_text",
-		"text": "My App",
+		"text": "Can Submit only once!",
 		"emoji": true
 	},
 	"submit": {
@@ -30,13 +30,6 @@ pl_json = """{
 				"text": "Welcome to Cornell Tech friend-match."
 			}
 		},
-        {
-			"type": "section",
-			"text": {
-				"type": "plain_text",
-				"text": "Note that you can only fill this up once!!!"
-			}
-		}
 		{
 			"type": "divider"
 		},

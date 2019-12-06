@@ -1,12 +1,11 @@
 # [START functions_slack_setup]
 import json
-
+import asyncio
 import slack
-
 import apiclient
 from flask import jsonify
-from DAL import get_friends, user_exists, user_count, add_user
 
+from DAL import get_friends, user_exists, user_count, add_user
 import my_slack_app_constants as const
 import views
 
@@ -31,9 +30,11 @@ def format_slack_message(username, friends):
     sep = ", "
     friends = [f'<@{f}>' for f in friends]
     userCount = user_count()
+
+    msg = f'Hi <@{username}>!\nOf the {userCount} users that have responded, we think your top {const.TOPN} friend recomendations are: {sep.join(friends)}'
     message = {
         'response_type': 'in_channel',
-        'text': f'Hi <@{username}>!\nOf the {userCount} users that have responded, we think your top {const.TOPN} friend recomendations are: {sep.join(friends)}',
+        'text': msg
     }
     return message
 
@@ -66,16 +67,20 @@ def modal(request):
 
   
     userid = request.form['user_id']
-    # if user_exists(username):
-        # return f'<@{userid}>, you have already filled out the form, thanks!\nIf you'd like to check whether we have better matches, run /friends'
+    if user_exists(userid):
+        msg = f'<@{userid}>, ' + "we have already successfully onboarded you!\nIf you'd like to check whether we have new matches for you, type `/friends`"
+        return msg
         
+    view = views.pl_view # test_view
+
     trigger = request.form['trigger_id']
     client.views_open(
         trigger_id=trigger,
         view = view
     )
     
-    return f'<@{userid}>, if you were correctly added to our database (we\'re still @ beta)\nyou can run /friends to find friend recommendations'
+    msg = "If you clicked `Submit`, Good Job " + f'<@{userid}>!' + "\nnow try typing `/friends` to find friend recommendations."
+    return msg
     
     
 def get_input(request):
@@ -95,7 +100,9 @@ def get_input(request):
     # state = payload['view']['state']
     # logging.info(f'state: {state}')
 
-    add_user(payload)
+    
+    loop = asyncio.get_event_loop()
+    loop.create_task(add_user(payload))
     return ''
     
     
