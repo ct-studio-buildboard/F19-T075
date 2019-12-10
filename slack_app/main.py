@@ -1,6 +1,5 @@
 # [START functions_slack_setup]
 import json
-import asyncio
 import slack
 import apiclient
 from flask import jsonify
@@ -39,10 +38,11 @@ def format_slack_message(username, friends):
     return message
 
 def make_search_request(username):
-    if not user_exists(username):
+    gsclient = _get_gspread_client()
+    friends = get_friends(username, )
+    if len(friends) == 0:
         return "please fill the full form by calling /addme"
         
-    friends = get_friends(username)
     return format_slack_message(username, friends)
 
 def friend_search(request):
@@ -67,9 +67,9 @@ def modal(request):
 
   
     userid = request.form['user_id']
-    if user_exists(userid):
-        msg = f'<@{userid}>, ' + "we have already successfully onboarded you!\nIf you'd like to check whether we have new matches for you, type `/friends`"
-        return msg
+    # if user_exists(userid):
+        # msg = f'<@{userid}>, ' + "we have already successfully onboarded you!\nIf you'd like to check whether we have new matches for you, type `/friends`"
+        # return msg
         
     view = views.pl_view # test_view
 
@@ -79,9 +79,8 @@ def modal(request):
         view = view
     )
     
-    msg = "If you clicked `Submit`, Good Job " + f'<@{userid}>!' + "\nnow try typing `/friends` to find friend recommendations."
+    msg = f'<@{userid}>!' + ", if you clicked `Submit`, Good Job!"  + "\n*Even though it may seem like it didn't work, it most likely did!* (this is still in beta)\nnow try typing `/friends` to find friend recommendations."
     return msg
-    
     
 def get_input(request):
     if request.method != 'POST':
@@ -95,25 +94,26 @@ def get_input(request):
     req_type = payload['type']
     # change this if you want to do input verification
     if req_type != "view_submission":
+        logging.info("not a submission, skipping")
         return 
         
-    # state = payload['view']['state']
-    # logging.info(f'state: {state}')
-
-    
-    loop = asyncio.get_event_loop()
-    loop.create_task(add_user(payload))
+    userid = payload['user']['id']
+    logging.info(f'userid is {userid}')
+    if user_exists(userid):
+        logging.info(f'user {userid} already exists')
+        return ''
+        
+    logging.info(f'adding user {userid}')
+    add_user(payload)
     return ''
+
+def _get_gspread_client():
+    # note that adding the second scope is necesary
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
+    gc = gspread.authorize(creds)
+
+    logging.info('created gspread client')
+    return gc
     
     
-    
-def route(request):
-    if request.method != 'POST':
-        return 'Only POST requests are accepted', 405
-    
-    arg = request.form['text']
-    
-    if arg == 'addme':
-        return modal(request)
-    elif arg == 'find':
-        return get_friends(request)

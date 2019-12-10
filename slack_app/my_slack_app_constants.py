@@ -1,6 +1,7 @@
 TOPN = 3
 SHEET_NAME = "SlackApp_Test1"
 ROW_LEN = 16
+DELIM = ", "
 
 #define column names
 USER_ID = 'user_id'

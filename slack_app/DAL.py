@@ -2,27 +2,52 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import numpy as np
+import asyncio
 from sklearn.metrics.pairwise import cosine_similarity
+
 import logging
 
 import my_slack_app_constants as const
 
-def get_gspread_client():
-    # note that adding the second scope is necesary
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
-    gc = gspread.authorize(creds)
+# export **********************************
+def get_friends(username, gsclient):
+    logging.info(f'get_friends for {username}')
+    df = _get_df(gsclient)
+    return _get_topn_for_user(df, username)
 
-    logging.info('created gspread client')
-    return gc
+def user_exists(username, gsclient):
+    logging.info(f'user_exists for {username}')
+
+    df = _get_df(gsclient)
+    idx = _get_user_index_list(df, username)
+    u_exists = len(idx) > 0
     
-def get_sheet():    
-    client = get_gspread_client()
-    sheet = client.open(const.SHEET_NAME).sheet1
+    logging.info(f'user {username} exists: {u_exists}')
+    return u_exists
+
+def user_count(gsclient):    
+    count = _get_num_rows(gsclient)
+    logging.info(f'user_count: {count} users')
+    return count
+    
+def add_user(payload, gsclient):
+    logging.info('add_user')
+
+    row = _get_user_row(payload)
+    add_row(row, gsclient)
+    # import time
+    # time.sleep(5)
+    _compute_friends(gsclient)
+
+
+# don't export ****************************
+
+def _get_sheet(gsclient):    
+    sheet = gsclient.open(const.SHEET_NAME).sheet1
     return sheet
 
-def get_df():
-    sheet = get_sheet()
+def _get_df(gsclient):
+    sheet = _get_sheet(gsclient)
     data = sheet.get_all_values()
     headers = data.pop(0)
     df = pd.DataFrame(data, columns=headers)
@@ -31,7 +56,7 @@ def get_df():
     logging.info(f'successfully read data frame from {const.SHEET_NAME}')
     return df
     
-def map_1to1_mappings(df):
+def _map_1to1_mappings(df):
     df[const.AGE] = df[const.AGE].map(const.age_map)
     df[const.CUISINE] = df[const.CUISINE].map(const.cuisine_map)
     df[const.LIKE_CT] = df[const.LIKE_CT].map(const.like_ct_map)
@@ -46,7 +71,7 @@ def map_1to1_mappings(df):
     df[const.TEA_COFFEE] = df[const.TEA_COFFEE].map(const.tea_coffee_map)
     return df
     
-def map_multiple_choice(df):
+def _map_multiple_choice(df):
     df['hb_sleep'] = df[const.HB].map(lambda x: 1 if const.HB_SLEEP in x else 0)
     df['hb_wo'] = df[const.HB].map(lambda x: 1 if const.HB_WO in x else 0)
     df['hb_friends'] = df[const.HB].map(lambda x: 1 if const.HB_FRIENDS in x else 0)
@@ -63,18 +88,19 @@ def map_multiple_choice(df):
     df = df.drop([const.HB], axis=1)
     return df
 
-def format_df(df):
-    df = map_1to1_mappings(df)
-    df = map_multiple_choice(df)
+def _format_df(df):
+    df = _map_1to1_mappings(df)
+    df = _map_multiple_choice(df)
+    df = df.drop(['cosine_top_n'], axis=1)
     
     logging.info('formated data frame to numeric space')
     return df
     
-def get_sort_indexes(l, reverse=False):
+def _get_sort_indexes(l, reverse=False):
     return sorted(range(len(l)), key=lambda k: l[k], reverse=reverse)
 
 # assumes n a positive integer  
-def compute_cosine_top_n(df, n):
+def _compute_cosine_top_n(df, n):
     cosine_df = df.copy()
     cosine_df = cosine_df.drop([const.USER_ID], axis=1)
 
@@ -83,66 +109,58 @@ def compute_cosine_top_n(df, n):
     
     # removal of self ocurs by range exclusion of 0
     l = range(1, n+1)
-    cosine_df['top_n'] = cosine_df.apply(lambda row: [df.iloc[get_sort_indexes(row.cosine, True)[x]][const.USER_ID] for x in l] , axis=1)
+    cosine_df['top_n'] = cosine_df.apply(lambda row: [df.iloc[_get_sort_indexes(row.cosine, True)[x]][const.USER_ID] for x in l] , axis=1)
     df['cosine_top_n'] = cosine_df['top_n']
     
     logging.info(f'successfully computed the top {n} cosine matches')
     return df
 
-def get_user_index_list(df, user):
+def _get_user_index_list(df, user):
     return df.index[df[const.USER_ID] == user].tolist()
 
 # assumes df has column named cosine_top_n
 # assumes user is in df only once
-def get_topn_for_user(df, user):
-    user_index_list = get_user_index_list(df, user)
+def _get_topn_for_user(df, user):
+    user_index_list = _get_user_index_list(df, user)
 
     err = ""
     if len(user_index_list) == 0:
-        err = f'user {user} was not found'
+        return []
     elif len(user_index_list) > 1:
-        err = f'user {user} exists multiple times'
+            err = f'user {user} exists multiple times'
     if err:
         raise Exception(err)
     
-    friends = df.iloc[user_index_list[0]]['cosine_top_n']
+    user_index = user_index_list[0]
+    friends = df.iloc[user_index]['cosine_top_n'].split(const.DELIM)
     
     logging.info(f'found friends: {friends}')
     return friends
 
-def write_topn_to_sheet(df):
-# more code
-    pass
+def _write_topn_to_sheet(ds, gsclient):
+    sheet = _get_sheet(gsclient)
+    rows = len(ds)
+    cell_list = sheet.range(f'Q2:Q{rows+1}')
 
-def compute_friends():
+    logging.info(f'series length: {len(ds)}, rows length: {rows}, cell_list length: {len(cell_list)}')
+    for i in range(len(cell_list)):
+        cell_list[i].value = const.DELIM.join(ds[i])
+    res = sheet.update_cells(cell_list)
+    logging.info(f'sheet cell update result: {res}')
+
+def _compute_friends(gsclient):
     logging.info('recomputing friends')
-    df = get_df()
-    df = format_df(df)
-    df = compute_cosine_top_n(df, const.TOPN)
-    write_topn_to_sheet(df)
+    df = _get_df(gsclient)
+    df = _format_df(df)
+    df = _compute_cosine_top_n(df, const.TOPN)
+    _write_topn_to_sheet(df['cosine_top_n'], gsclient)
 
-def get_friends(username):
-    logging.info(f'searching friends for {username}')
-    return get_topn_for_user(df, username)
-    
-def user_exists(username):
-    logging.info(f'checking existence of {username}')
-    df = get_df()
-    idx = get_user_index_list(df, username)
-    u_exists = len(idx) > 0
-    
-    logging.info(f'user {username} exists: {u_exists}')
-    return u_exists
-    
-def user_count():
-    logging.info('user_count')
-    df = get_df()
+def _get_num_rows(gsclient):
+    df = _get_df(gsclient)
     count = df.count()[0]
-
-    logging.info(f'have counted {count} users')
     return count
 
-def get_blocks_dic(blocks):
+def _get_blocks_dic(blocks):
     dic = {}
     for block in blocks:
         try:
@@ -186,15 +204,12 @@ def get_blocks_dic(blocks):
     logging.info(f'computed dictionary: {dic}')
     return dic    
 
-def get_user_row(payload):
+def _get_user_row(payload):
     userID = payload['user']['id']
     blocks = payload['view']['blocks']
     values = payload['view']['state']['values']
     
-    for b in blocks:
-        logging.info(f'b: {b}')
-
-    dic = get_blocks_dic(blocks)
+    dic = _get_blocks_dic(blocks)
     logging.info(f'values: {values}')
     
     age = values[dic['age'][0]][dic['age'][1]]['selected_option']['value']
@@ -234,14 +249,8 @@ def get_user_row(payload):
     logging.info(f'extracted row: {userRow}')
     return userRow
 
-    
-def add_row(user_row):
-    sheet = get_sheet()
+def add_row(user_row, gsclient):
+    sheet = _get_sheet(gsclient)
     ret = sheet.append_row(user_row)
-    return ret
+    logging.info(f'sheet append row result: {ret}')
     
-def add_user(payload):
-    row = get_user_row(payload)
-    res = add_row(row)
-    
-    return res
