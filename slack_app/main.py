@@ -20,6 +20,7 @@ config = json.loads(data)
 
 
 def verify_web_hook(form):
+    logging.info('verifying slack token')
     if not form or form.get('token') != config['SLACK_TOKEN']:
         raise ValueError('Invalid request/credentials.')
 
@@ -65,14 +66,15 @@ def modal(request):
     
     client = slack.WebClient(token=config['SLACK_OAUTH'])
 
-  
     userid = request.form['user_id']
+    logging.info(f'checking existense of user {userid}')
     if user_exists(userid):
         msg = f'<@{userid}>, ' + "we have already successfully onboarded you!\nIf you'd like to check whether we have new matches for you, type `/friends`"
         return msg
         
     view = views.pl_view # test_view
 
+    logging.info('triggering form')
     trigger = request.form['trigger_id']
     client.views_open(
         trigger_id=trigger,
@@ -101,8 +103,13 @@ def get_input(request):
     # logging.info(f'state: {state}')
 
     
-    loop = asyncio.get_event_loop()
-    loop.create_task(add_user(payload))
+    # loop = asyncio.get_event_loop()
+    # loop.create_task(add_user(payload))
+    import threading
+    task = threading.Thread(target=add_user, args=(payload,)) #the comma is important to denote args as a tuple of arguments
+    task.start()
+    logging.info(f'created async task to add user in new thread')
+    
     return ''
     
     

@@ -66,8 +66,11 @@ def map_multiple_choice(df):
 def format_df(df):
     df = map_1to1_mappings(df)
     df = map_multiple_choice(df)
+    df = df.drop(['cosine_top_n'], axis=1)
     
     logging.info('formated data frame to numeric space')
+    nans =  df.isna().sum()
+    logging.info(f'found NaNs: {nans}')
     return df
     
 def get_sort_indexes(l, reverse=False):
@@ -105,21 +108,30 @@ def get_topn_for_user(df, user):
     if err:
         raise Exception(err)
     
-    friends = df.iloc[user_index_list[0]]['cosine_top_n']
+    u_idx = user_index_list[0]
+    friends = df.iloc[u_idx]['cosine_top_n'].split(const.DELIM)
     
     logging.info(f'found friends: {friends}')
     return friends
 
-def write_topn_to_sheet(df):
-# more code
-    pass
+def write_topn_to_sheet(ds):
+    sheet = get_sheet()
+    rows = len(ds)
+    cell_list = sheet.range(f'Q2:Q{rows+1}')
+    
+    logging.info(f'series length: {len(ds)}, rows length: {rows}, cell_list length: {len(cell_list)}')
+
+    for i in range(len(cell_list)):
+        cell_list[i].value = const.DELIM.join(ds[i])
+    res = sheet.update_cells(cell_list)
+    logging.info(f'sheet cell update result: {res}')
 
 def compute_friends():
     logging.info('recomputing friends')
     df = get_df()
     df = format_df(df)
     df = compute_cosine_top_n(df, const.TOPN)
-    write_topn_to_sheet(df)
+    write_topn_to_sheet(df['cosine_top_n'])
 
 def get_friends(username):
     logging.info(f'searching friends for {username}')
@@ -190,9 +202,6 @@ def get_user_row(payload):
     userID = payload['user']['id']
     blocks = payload['view']['blocks']
     values = payload['view']['state']['values']
-    
-    for b in blocks:
-        logging.info(f'b: {b}')
 
     dic = get_blocks_dic(blocks)
     logging.info(f'values: {values}')
@@ -243,5 +252,7 @@ def add_row(user_row):
 def add_user(payload):
     row = get_user_row(payload)
     res = add_row(row)
+    
+    compute_friends()
     
     return res
