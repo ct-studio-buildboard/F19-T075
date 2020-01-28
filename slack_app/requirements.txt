@@ -1,0 +1,8 @@
+google-api-python-client==1.7.11
+flask==1.1.1
+pandas
+numpy
+scikit-learn
+gspread
+oauth2client
+slackclient
