@@ -40,10 +40,11 @@ def format_slack_message(username, friends):
     return message
 
 def make_search_request(username):
-    if not user_exists(username):
-        return "please fill the full form by calling /addme"
         
     friends = get_friends(username)
+    if not friends:
+        return "please fill the full form by calling /addme"
+    
     return format_slack_message(username, friends)
 
 def friend_search(request):
